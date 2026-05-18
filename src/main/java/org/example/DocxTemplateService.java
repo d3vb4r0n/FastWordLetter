@@ -2,6 +2,8 @@ package org.example;
 
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
+import org.apache.poi.xwpf.usermodel.BreakType;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFFooter;
 import org.apache.poi.xwpf.usermodel.XWPFHeader;
@@ -10,6 +12,7 @@ import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import org.apache.xmlbeans.XmlCursor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,6 +27,7 @@ import java.util.Set;
 public class DocxTemplateService {
 
     private static final String LOGO_PLACEHOLDER = "{{COMPANY_LOGO}}";
+    private static final String ATTACHMENTS_SECTION_PLACEHOLDER = "{{ATTACHMENTS_SECTION}}";
     private static final int DEFAULT_LOGO_WIDTH = 140;
     private static final int DEFAULT_LOGO_HEIGHT = 80;
     private static final Set<String> UNDERLINED_PLACEHOLDERS = Set.of(
@@ -36,28 +40,33 @@ public class DocxTemplateService {
     public void generateFromTemplate(Path templatePath, Path outputPath, LetterData data) throws IOException {
         Map<String, String> placeholders = data.toPlaceholderMap();
         Path logoPath = toLogoPath(data.companyLogoPath());
+        List<Attachment> attachments = data.attachments();
 
         try (InputStream in = Files.newInputStream(templatePath);
              XWPFDocument document = new XWPFDocument(in)) {
 
-            processParagraphs(document.getParagraphs(), placeholders, logoPath);
+            processParagraphs(document.getParagraphs(), placeholders, logoPath, attachments);
 
             for (XWPFTable table : document.getTables()) {
-                processTable(table, placeholders, logoPath);
+                processTable(table, placeholders, logoPath, attachments);
             }
 
             for (XWPFHeader header : document.getHeaderList()) {
-                processParagraphs(header.getParagraphs(), placeholders, logoPath);
+                processParagraphs(header.getParagraphs(), placeholders, logoPath, attachments);
                 for (XWPFTable table : header.getTables()) {
-                    processTable(table, placeholders, logoPath);
+                    processTable(table, placeholders, logoPath, attachments);
                 }
             }
 
             for (XWPFFooter footer : document.getFooterList()) {
-                processParagraphs(footer.getParagraphs(), placeholders, logoPath);
+                processParagraphs(footer.getParagraphs(), placeholders, logoPath, attachments);
                 for (XWPFTable table : footer.getTables()) {
-                    processTable(table, placeholders, logoPath);
+                    processTable(table, placeholders, logoPath, attachments);
                 }
+            }
+
+            if (attachments == null || attachments.isEmpty()) {
+                trimTrailingEmptyParagraphs(document);
             }
 
             try (OutputStream out = Files.newOutputStream(outputPath)) {
@@ -66,26 +75,32 @@ public class DocxTemplateService {
         }
     }
 
-    private void processTable(XWPFTable table, Map<String, String> placeholders, Path logoPath) throws IOException {
+    private void processTable(XWPFTable table, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments) throws IOException {
         for (XWPFTableRow row : table.getRows()) {
             for (XWPFTableCell cell : row.getTableCells()) {
-                processParagraphs(cell.getParagraphs(), placeholders, logoPath);
+                processParagraphs(cell.getParagraphs(), placeholders, logoPath, attachments);
                 for (XWPFTable nestedTable : cell.getTables()) {
-                    processTable(nestedTable, placeholders, logoPath);
+                    processTable(nestedTable, placeholders, logoPath, attachments);
                 }
             }
         }
     }
 
-    private void processParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> placeholders, Path logoPath) throws IOException {
-        for (XWPFParagraph paragraph : paragraphs) {
-            renderParagraph(paragraph, placeholders, logoPath);
+    private void processParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments) throws IOException {
+        List<XWPFParagraph> snapshot = new ArrayList<>(paragraphs);
+        for (XWPFParagraph paragraph : snapshot) {
+            renderParagraph(paragraph, placeholders, logoPath, attachments);
         }
     }
 
-    private void renderParagraph(XWPFParagraph paragraph, Map<String, String> placeholders, Path logoPath) throws IOException {
+    private void renderParagraph(XWPFParagraph paragraph, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments) throws IOException {
         String text = paragraph.getText();
         if (text == null || text.isEmpty()) {
+            return;
+        }
+
+        if (text.contains(ATTACHMENTS_SECTION_PLACEHOLDER)) {
+            renderAttachmentsSection(paragraph, attachments);
             return;
         }
 
@@ -137,17 +152,6 @@ public class DocxTemplateService {
         }
     }
 
-    private void addTextRun(XWPFParagraph paragraph, String text, boolean underlined) {
-        if (text == null || text.isEmpty()) {
-            return;
-        }
-        XWPFRun run = paragraph.createRun();
-        run.setText(text);
-        if (underlined) {
-            run.setUnderline(org.apache.poi.xwpf.usermodel.UnderlinePatterns.SINGLE);
-        }
-    }
-
     private void addLogoRun(XWPFParagraph paragraph, Path logoPath) throws IOException {
         if (logoPath == null) {
             return;
@@ -193,6 +197,121 @@ public class DocxTemplateService {
     private record Match(int start, String marker) {
     }
 
+    private void addTextRun(XWPFParagraph paragraph, String text, boolean underlined) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        String[] lines = text.split("\\R", -1);
+        for (int i = 0; i < lines.length; i++) {
+            XWPFRun run = paragraph.createRun();
+            run.setText(lines[i]);
+            if (underlined) {
+                run.setUnderline(org.apache.poi.xwpf.usermodel.UnderlinePatterns.SINGLE);
+            }
+            if (i < lines.length - 1) {
+                run.addBreak();
+            }
+        }
+    }
+
+    private void renderAttachmentsSection(XWPFParagraph paragraph, List<Attachment> attachments) {
+        if (attachments == null || attachments.isEmpty()) {
+            if (!removeParagraph(paragraph)) {
+                clearParagraphRuns(paragraph);
+            }
+            return;
+        }
+
+        boolean multiple = attachments.size() > 1;
+        XWPFParagraph current = paragraph;
+        for (int i = 0; i < attachments.size(); i++) {
+            Attachment attachment = attachments.get(i);
+            if (i > 0) {
+                current = insertParagraphAfter(current);
+            }
+            clearParagraphRuns(current);
+            current.setAlignment(ParagraphAlignment.RIGHT);
+
+            XWPFRun headerRun = current.createRun();
+            if (i > 0) {
+                headerRun.addBreak(BreakType.PAGE);
+            }
+            headerRun.setText(multiple ? "Приложение " + (i + 1) : "Приложение");
+
+            XWPFParagraph titleParagraph = insertParagraphAfter(current);
+            titleParagraph.setAlignment(ParagraphAlignment.CENTER);
+            addTextRun(titleParagraph, safe(attachment.title()), false);
+
+            List<String> bodyLines = splitLines(safe(attachment.body()));
+            XWPFParagraph bodyParagraph = insertParagraphAfter(titleParagraph);
+            bodyParagraph.setAlignment(ParagraphAlignment.LEFT);
+            if (bodyLines.isEmpty()) {
+                addTextRun(bodyParagraph, "", false);
+            } else {
+                addTextRun(bodyParagraph, bodyLines.get(0), false);
+                for (int lineIndex = 1; lineIndex < bodyLines.size(); lineIndex++) {
+                    XWPFParagraph nextBody = insertParagraphAfter(bodyParagraph);
+                    nextBody.setAlignment(ParagraphAlignment.LEFT);
+                    addTextRun(nextBody, bodyLines.get(lineIndex), false);
+                    bodyParagraph = nextBody;
+                }
+            }
+            current = bodyParagraph;
+        }
+    }
+
+    private XWPFParagraph insertParagraphAfter(XWPFParagraph paragraph) {
+        XmlCursor cursor = paragraph.getCTP().newCursor();
+        cursor.toEndToken();
+        Object body = paragraph.getBody();
+        try {
+            if (body instanceof XWPFDocument document) {
+                return document.insertNewParagraph(cursor);
+            }
+            if (body instanceof XWPFTableCell cell) {
+                return cell.insertNewParagraph(cursor);
+            }
+            if (body instanceof XWPFHeader header) {
+                return header.insertNewParagraph(cursor);
+            }
+            if (body instanceof XWPFFooter footer) {
+                return footer.insertNewParagraph(cursor);
+            }
+        } catch (ClassCastException ignored) {
+        }
+        if (body instanceof XWPFDocument document) {
+            return document.createParagraph();
+        }
+        if (body instanceof XWPFTableCell cell) {
+            return cell.addParagraph();
+        }
+        if (body instanceof XWPFHeader header) {
+            return header.createParagraph();
+        }
+        if (body instanceof XWPFFooter footer) {
+            return footer.createParagraph();
+        }
+        throw new IllegalStateException("Не удалось вставить новый абзац для приложений.");
+    }
+
+    private List<String> splitLines(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        String[] lines = text.split("\\R", -1);
+        List<String> result = new ArrayList<>();
+        for (String line : lines) {
+            if (!line.isEmpty() || lines.length == 1) {
+                result.add(line);
+            }
+        }
+        return result;
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
     private Path toLogoPath(String rawPath) {
         if (rawPath == null || rawPath.isBlank()) {
             return null;
@@ -209,13 +328,55 @@ public class DocxTemplateService {
         if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
             return XWPFDocument.PICTURE_TYPE_JPEG;
         }
-        if (fileName.endsWith(".gif")) {
-            return XWPFDocument.PICTURE_TYPE_GIF;
-        }
-        if (fileName.endsWith(".bmp")) {
-            return XWPFDocument.PICTURE_TYPE_BMP;
-        }
         return XWPFDocument.PICTURE_TYPE_PNG;
     }
-}
 
+
+    private boolean removeParagraph(XWPFParagraph paragraph) {
+        Object body = paragraph.getBody();
+        if (body instanceof XWPFDocument document) {
+            int index = document.getBodyElements().indexOf(paragraph);
+            return index >= 0 && document.removeBodyElement(index);
+        }
+        if (body instanceof XWPFTableCell cell) {
+            int index = cell.getParagraphs().indexOf(paragraph);
+            if (index >= 0) {
+                cell.removeParagraph(index);
+                return true;
+            }
+            return false;
+        }
+        if (body instanceof XWPFHeader header) {
+            int index = header.getParagraphs().indexOf(paragraph);
+            if (index >= 0) {
+                header.removeParagraph(paragraph);
+                return true;
+            }
+            return false;
+        }
+        if (body instanceof XWPFFooter footer) {
+            int index = footer.getParagraphs().indexOf(paragraph);
+            if (index >= 0) {
+                footer.removeParagraph(paragraph);
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    private void trimTrailingEmptyParagraphs(XWPFDocument document) {
+        List<org.apache.poi.xwpf.usermodel.IBodyElement> elements = document.getBodyElements();
+        for (int i = elements.size() - 1; i >= 0; i--) {
+            org.apache.poi.xwpf.usermodel.IBodyElement element = elements.get(i);
+            if (element instanceof XWPFParagraph paragraph) {
+                String text = paragraph.getText();
+                if (text == null || text.isBlank()) {
+                    document.removeBodyElement(i);
+                    continue;
+                }
+            }
+            break;
+        }
+    }
+}

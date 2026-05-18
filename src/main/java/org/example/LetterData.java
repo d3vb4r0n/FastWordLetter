@@ -3,6 +3,7 @@ package org.example;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public record LetterData(
@@ -24,7 +25,8 @@ public record LetterData(
         String letterBody,
         String writerName,
         String writerPosition,
-        String signature
+        String signature,
+        List<Attachment> attachments
 ) {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
@@ -48,11 +50,29 @@ public record LetterData(
         values.put("{{WRITER_NAME}}", safe(writerName));
         values.put("{{WRITER_POSITION}}", safe(writerPosition));
         values.put("{{SIGNATURE}}", safe(signature));
+        values.put("{{ATTACHMENTS_LIST}}", buildAttachmentsList());
         return values;
+    }
+
+    private String buildAttachmentsList() {
+        if (attachments == null || attachments.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append(attachments.size() == 1 ? "Приложение:" : "Приложения:");
+        for (int i = 0; i < attachments.size(); i++) {
+            Attachment attachment = attachments.get(i);
+            String title = safe(attachment.title());
+            builder.append("\n").append(i + 1).append(". ").append(title);
+            String pages = safe(attachment.pages());
+            if (!pages.isBlank()) {
+                builder.append(" на ").append(pages).append(" л.");
+            }
+        }
+        return builder.toString();
     }
 
     private static String safe(String value) {
         return value == null ? "" : value;
     }
 }
-
