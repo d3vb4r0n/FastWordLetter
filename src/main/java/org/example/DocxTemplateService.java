@@ -45,21 +45,21 @@ public class DocxTemplateService {
         try (InputStream in = Files.newInputStream(templatePath);
              XWPFDocument document = new XWPFDocument(in)) {
 
-            processParagraphs(document.getParagraphs(), placeholders, logoPath, attachments);
+            processParagraphs(document.getParagraphs(), placeholders, logoPath, attachments, true);
 
             for (XWPFTable table : document.getTables()) {
                 processTable(table, placeholders, logoPath, attachments);
             }
 
             for (XWPFHeader header : document.getHeaderList()) {
-                processParagraphs(header.getParagraphs(), placeholders, logoPath, attachments);
+                processParagraphs(header.getParagraphs(), placeholders, logoPath, attachments, false);
                 for (XWPFTable table : header.getTables()) {
                     processTable(table, placeholders, logoPath, attachments);
                 }
             }
 
             for (XWPFFooter footer : document.getFooterList()) {
-                processParagraphs(footer.getParagraphs(), placeholders, logoPath, attachments);
+                processParagraphs(footer.getParagraphs(), placeholders, logoPath, attachments, false);
                 for (XWPFTable table : footer.getTables()) {
                     processTable(table, placeholders, logoPath, attachments);
                 }
@@ -78,7 +78,7 @@ public class DocxTemplateService {
     private void processTable(XWPFTable table, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments) throws IOException {
         for (XWPFTableRow row : table.getRows()) {
             for (XWPFTableCell cell : row.getTableCells()) {
-                processParagraphs(cell.getParagraphs(), placeholders, logoPath, attachments);
+                processParagraphs(cell.getParagraphs(), placeholders, logoPath, attachments, false);
                 for (XWPFTable nestedTable : cell.getTables()) {
                     processTable(nestedTable, placeholders, logoPath, attachments);
                 }
@@ -86,20 +86,20 @@ public class DocxTemplateService {
         }
     }
 
-    private void processParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments) throws IOException {
+    private void processParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments, boolean allowAttachments) throws IOException {
         List<XWPFParagraph> snapshot = new ArrayList<>(paragraphs);
         for (XWPFParagraph paragraph : snapshot) {
-            renderParagraph(paragraph, placeholders, logoPath, attachments);
+            renderParagraph(paragraph, placeholders, logoPath, attachments, allowAttachments);
         }
     }
 
-    private void renderParagraph(XWPFParagraph paragraph, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments) throws IOException {
+    private void renderParagraph(XWPFParagraph paragraph, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments, boolean allowAttachments) throws IOException {
         String text = paragraph.getText();
         if (text == null || text.isEmpty()) {
             return;
         }
 
-        if (text.contains(ATTACHMENTS_SECTION_PLACEHOLDER)) {
+        if (allowAttachments && text.contains(ATTACHMENTS_SECTION_PLACEHOLDER)) {
             renderAttachmentsSection(paragraph, attachments);
             return;
         }
