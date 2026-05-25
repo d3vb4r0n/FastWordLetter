@@ -26,12 +26,13 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LetterGeneratorApp extends Application {
+public class LetterApp extends Application {
 
     private static final Path TEMPLATE_PATH = Path.of("materials", "Шаблон.docx").toAbsolutePath();
     private static final String DEFAULT_LOGO_PATH = Path.of("materials", "Logo.jpg").toAbsolutePath().toString();
+    private static final String ERROR_CLASS = "field-error";
 
-    private final DocxTemplateService templateService = new DocxTemplateService();
+    private final LetterDocx templateService = new LetterDocx();
 
     private final TextField companyNameField = new TextField();
     private final TextField phoneField = new TextField();
@@ -59,7 +60,7 @@ public class LetterGeneratorApp extends Application {
 
     @Override
     public void start(Stage stage) {
-        stage.setTitle("Генератор писем DOCX");
+        stage.setTitle("Несчастный генератор писем DOCX");
 
         letterBodyArea.setPrefRowCount(8);
         letterBodyArea.setWrapText(true);
@@ -72,7 +73,6 @@ public class LetterGeneratorApp extends Application {
 
         int row = 0;
         addRow(form, row++, "Название компании", companyNameField, "ООО \"Рога и Копыта\"");
-        addRow(form, row++, "Логотип компании", new Label(""), "");
         addRow(form, row++, "Телефон", phoneField, "+7 123 456 78 90");
         addRow(form, row++, "Факс", faxField, "+8 123 456 78 90");
         addRow(form, row++, "Почта", emailField, "rogacopita@gmail.com");
@@ -87,10 +87,13 @@ public class LetterGeneratorApp extends Application {
         addRow(form, row++, "Дата письма, на которое отвечаем", replyLetterDatePicker, "");
         addRow(form, row++, "Заголовок письма", letterTitleField, "Уважаемый Остап Бендер,");
         addRow(form, row++, "Тело письма", letterBodyArea, "Верните, пожалуйста, стул!");
-        addRow(form, row++, "Приложения", createAttachmentsSection(), "");
         addRow(form, row++, "ФИО автора", writerNameField, "Зюганов Геннадий Андреевич");
         addRow(form, row++, "Должность автора", writerPositionField, "Руководитель партии КПРФ");
-        addRow(form, row, "Подпись", signatureField, "Зюганов Г. А.");
+        addRow(form, row++, "Подпись", signatureField, "Зюганов Г. А.");
+        Separator attachmentsSeparator = new Separator();
+        form.add(attachmentsSeparator, 0, row++);
+        GridPane.setColumnSpan(attachmentsSeparator, 3);
+        addRow(form, row, "Приложения", createAttachmentsSection(), "");
 
         Button fillExamplesButton = new Button("Заполнить по примеру");
         fillExamplesButton.setOnAction(event -> fillFromExamples());
@@ -112,6 +115,11 @@ public class LetterGeneratorApp extends Application {
         root.setBottom(actions);
 
         Scene scene = new Scene(root, 980, 680);
+        var stylesheet = getClass().getResource("/styles.css");
+        if (stylesheet != null) {
+            scene.getStylesheets().add(stylesheet.toExternalForm());
+        }
+        registerValidationListeners();
         stage.setScene(scene);
         stage.show();
     }
@@ -126,7 +134,7 @@ public class LetterGeneratorApp extends Application {
 
     private Label createExampleLabel(String example) {
         Label label = new Label(example == null ? "" : example);
-        label.setStyle("-fx-text-fill: derive(-fx-text-inner-color, 45%); -fx-font-size: 11px;");
+        label.setStyle("-fx-text-fill: #c3b7ff; -fx-font-size: 11px;");
         label.setWrapText(true);
         label.setMaxWidth(330);
         return label;
@@ -171,6 +179,9 @@ public class LetterGeneratorApp extends Application {
     }
 
     private void generateDocument(Stage stage) {
+        if (!validateRequiredFields()) {
+            return;
+        }
         if (!TEMPLATE_PATH.toFile().exists()) {
             showError("Не найден шаблон DOCX: " + TEMPLATE_PATH);
             return;
@@ -244,6 +255,83 @@ public class LetterGeneratorApp extends Application {
         alert.showAndWait();
     }
 
+    private boolean validateRequiredFields() {
+        List<Node> invalid = new ArrayList<>();
+
+        for (Node node : requiredNodes()) {
+            if (node instanceof TextInputControl textInput) {
+                if (textInput.getText() == null || textInput.getText().isBlank()) {
+                    invalid.add(node);
+                }
+            } else if (node instanceof DatePicker datePicker) {
+                if (datePicker.getValue() == null) {
+                    invalid.add(node);
+                }
+            }
+        }
+
+        clearValidationStyles();
+        for (Node node : invalid) {
+            if (!node.getStyleClass().contains(ERROR_CLASS)) {
+                node.getStyleClass().add(ERROR_CLASS);
+            }
+        }
+
+        if (!invalid.isEmpty()) {
+            invalid.get(0).requestFocus();
+            showError("Введены не все необходимые данные.");
+            return false;
+        }
+        return true;
+    }
+
+    private List<Node> requiredNodes() {
+        return List.of(
+                companyNameField,
+                phoneField,
+                faxField,
+                emailField,
+                okpoField,
+                ogrnField,
+                innField,
+                kppField,
+                fillDatePicker,
+                recipientField,
+                ourLetterNumberField,
+                replyLetterNumberField,
+                replyLetterDatePicker,
+                letterTitleField,
+                letterBodyArea,
+                writerNameField,
+                writerPositionField,
+                signatureField
+        );
+    }
+
+    private void clearValidationStyles() {
+        for (Node node : requiredNodes()) {
+            node.getStyleClass().remove(ERROR_CLASS);
+        }
+    }
+
+    private void registerValidationListeners() {
+        for (Node node : requiredNodes()) {
+            if (node instanceof TextInputControl textInput) {
+                textInput.textProperty().addListener((obs, oldValue, newValue) -> {
+                    if (newValue != null && !newValue.isBlank()) {
+                        node.getStyleClass().remove(ERROR_CLASS);
+                    }
+                });
+            } else if (node instanceof DatePicker datePicker) {
+                datePicker.valueProperty().addListener((obs, oldValue, newValue) -> {
+                    if (newValue != null) {
+                        node.getStyleClass().remove(ERROR_CLASS);
+                    }
+                });
+            }
+        }
+    }
+
     private Node createAttachmentsSection() {
         Button addAttachmentButton = new Button("Добавить приложение");
         addAttachmentButton.setOnAction(event -> addAttachmentRow("", "", ""));
@@ -261,8 +349,8 @@ public class LetterGeneratorApp extends Application {
         attachmentsBox.getChildren().add(row.container);
     }
 
-    private List<Attachment> buildAttachments() {
-        List<Attachment> attachments = new ArrayList<>();
+    private List<LetterAttachment> buildAttachments() {
+        List<LetterAttachment> attachments = new ArrayList<>();
         for (AttachmentRow row : attachmentRows) {
             String title = safeTrim(row.titleField.getText());
             String body = safeTrim(row.bodyArea.getText());
@@ -270,7 +358,7 @@ public class LetterGeneratorApp extends Application {
             if (title.isBlank() && body.isBlank()) {
                 continue;
             }
-            attachments.add(new Attachment(title, body, pages));
+            attachments.add(new LetterAttachment(title, body, pages));
         }
         return attachments;
     }
@@ -292,13 +380,13 @@ public class LetterGeneratorApp extends Application {
             bodyArea.setPrefRowCount(4);
             bodyArea.setWrapText(true);
 
-            HBox header = new HBox(8);
-            header.getChildren().addAll(
-                    new Label("Заголовок"),
-                    titleField,
-                    new Label("Листов"),
-                    pagesField
-            );
+            Label titleExample = createExampleLabel("Учеба");
+            Label pagesExample = createExampleLabel("2");
+            Label bodyExample = createExampleLabel("Сессия близка...");
+
+            VBox titleBox = new VBox(2, new Label("Заголовок"), titleField, titleExample);
+            VBox pagesBox = new VBox(2, new Label("Листов"), pagesField, pagesExample);
+            HBox header = new HBox(12, titleBox, pagesBox);
 
             Button removeButton = new Button("Удалить");
             removeButton.setOnAction(event -> {
@@ -310,9 +398,11 @@ public class LetterGeneratorApp extends Application {
                     header,
                     new Label("Текст приложения"),
                     bodyArea,
+                    bodyExample,
                     removeButton,
                     new Separator()
             );
         }
     }
 }
+

@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class DocxTemplateService {
+public class LetterDocx {
 
     private static final String LOGO_PLACEHOLDER = "{{COMPANY_LOGO}}";
     private static final String ATTACHMENTS_SECTION_PLACEHOLDER = "{{ATTACHMENTS_SECTION}}";
@@ -40,7 +40,7 @@ public class DocxTemplateService {
     public void generateFromTemplate(Path templatePath, Path outputPath, LetterData data) throws IOException {
         Map<String, String> placeholders = data.toPlaceholderMap();
         Path logoPath = toLogoPath(data.companyLogoPath());
-        List<Attachment> attachments = data.attachments();
+        List<LetterAttachment> attachments = data.attachments();
 
         try (InputStream in = Files.newInputStream(templatePath);
              XWPFDocument document = new XWPFDocument(in)) {
@@ -75,7 +75,7 @@ public class DocxTemplateService {
         }
     }
 
-    private void processTable(XWPFTable table, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments) throws IOException {
+    private void processTable(XWPFTable table, Map<String, String> placeholders, Path logoPath, List<LetterAttachment> attachments) throws IOException {
         for (XWPFTableRow row : table.getRows()) {
             for (XWPFTableCell cell : row.getTableCells()) {
                 processParagraphs(cell.getParagraphs(), placeholders, logoPath, attachments, false);
@@ -86,14 +86,14 @@ public class DocxTemplateService {
         }
     }
 
-    private void processParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments, boolean allowAttachments) throws IOException {
+    private void processParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> placeholders, Path logoPath, List<LetterAttachment> attachments, boolean allowAttachments) throws IOException {
         List<XWPFParagraph> snapshot = new ArrayList<>(paragraphs);
         for (XWPFParagraph paragraph : snapshot) {
             renderParagraph(paragraph, placeholders, logoPath, attachments, allowAttachments);
         }
     }
 
-    private void renderParagraph(XWPFParagraph paragraph, Map<String, String> placeholders, Path logoPath, List<Attachment> attachments, boolean allowAttachments) throws IOException {
+    private void renderParagraph(XWPFParagraph paragraph, Map<String, String> placeholders, Path logoPath, List<LetterAttachment> attachments, boolean allowAttachments) throws IOException {
         String text = paragraph.getText();
         if (text == null || text.isEmpty()) {
             return;
@@ -214,7 +214,7 @@ public class DocxTemplateService {
         }
     }
 
-    private void renderAttachmentsSection(XWPFParagraph paragraph, List<Attachment> attachments) {
+    private void renderAttachmentsSection(XWPFParagraph paragraph, List<LetterAttachment> attachments) {
         if (attachments == null || attachments.isEmpty()) {
             if (!removeParagraph(paragraph)) {
                 clearParagraphRuns(paragraph);
@@ -225,7 +225,7 @@ public class DocxTemplateService {
         boolean multiple = attachments.size() > 1;
         XWPFParagraph current = paragraph;
         for (int i = 0; i < attachments.size(); i++) {
-            Attachment attachment = attachments.get(i);
+            LetterAttachment attachment = attachments.get(i);
             if (i > 0) {
                 current = insertParagraphAfter(current);
             }
@@ -380,3 +380,4 @@ public class DocxTemplateService {
         }
     }
 }
+

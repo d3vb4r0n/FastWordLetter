@@ -1,0 +1,111 @@
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-background-color: #1a1730;
+}
+
+.label {
+    -fx-text-fill: #e6e1ff;
+}
+
+.scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.text-field,
+.text-area,
+.date-picker {
+    -fx-background-color: #1b1830;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #3a3266;
+    -fx-border-width: 1;
+    -fx-padding: 6 10;
+    -fx-focus-color: #8f6bff;
+    -fx-faint-focus-color: transparent;
+    -fx-text-fill: #f2efff;
+    -fx-prompt-text-fill: #c3b7ff;
+}
+
+.text-area .content {
+    -fx-background-color: #1b1830;
+    -fx-background-radius: 10;
+}
+
+.date-picker > .text-field {
+    -fx-background-color: #1b1830;
+}
+
+.date-picker .arrow-button {
+    -fx-background-color: #2a2448;
+    -fx-background-radius: 10;
+}
+
+.date-picker .arrow {
+    -fx-background-color: #f2efff;
+}
+
+.date-picker-popup {
+    -fx-background-color: #211c3a;
+    -fx-border-color: #3a3266;
+}
+
+.date-picker-popup .month-year-pane {
+    -fx-background-color: #2a2448;
+}
+
+.date-picker-popup .spinner .button {
+    -fx-background-color: #2a2448;
+    -fx-text-fill: #f2efff;
+}
+
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: #151226;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #3b3370;
+    -fx-background-radius: 8;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+
+.button {
+    -fx-background-color: #6f5cff;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 14;
+    -fx-padding: 8 16;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(13, 10, 26, 0.5), 10, 0.25, 0, 2);
+}
+
+.button:hover {
+    -fx-background-color: #7e6dff;
+}
+
+.button:pressed {
+    -fx-background-color: #5d49f0;
+}
+
+.separator .line {
+    -fx-border-color: #3a3266;
+    -fx-border-width: 1;
+}
+
+.field-error {
+    -fx-border-color: #ff5b5b;
+    -fx-border-width: 2;
+    -fx-background-color: #2b1a20;
+}
+
+.text-area.field-error .content {
+    -fx-background-color: #2b1a20;
+}
+

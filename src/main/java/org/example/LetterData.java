@@ -26,7 +26,7 @@ public record LetterData(
         String writerName,
         String writerPosition,
         String signature,
-        List<Attachment> attachments
+        List<LetterAttachment> attachments
 ) {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
@@ -61,7 +61,7 @@ public record LetterData(
         StringBuilder builder = new StringBuilder();
         builder.append(attachments.size() == 1 ? "Приложение:" : "Приложения:");
         for (int i = 0; i < attachments.size(); i++) {
-            Attachment attachment = attachments.get(i);
+            LetterAttachment attachment = attachments.get(i);
             String title = safe(attachment.title());
             builder.append("\n").append(i + 1).append(". ").append(title);
             String pages = safe(attachment.pages());

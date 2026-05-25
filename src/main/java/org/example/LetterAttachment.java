@@ -1,8 +1,9 @@
 package org.example;
 
-public record Attachment(
+public record LetterAttachment(
         String title,
         String body,
         String pages
 ) {
 }
+
