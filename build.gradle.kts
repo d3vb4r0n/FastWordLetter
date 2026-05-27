@@ -11,14 +11,19 @@ repositories {
     mavenCentral()
 }
 
-
 javafx {
     version = "21"
-    modules = listOf("javafx.controls")
+    modules = listOf("javafx.controls", "javafx.swing")
 }
 
 dependencies {
     implementation("org.apache.poi:poi-ooxml:5.4.1")
+
+    implementation("fr.opensagres.xdocreport:fr.opensagres.poi.xwpf.converter.core:2.0.4")
+    implementation("fr.opensagres.xdocreport:fr.opensagres.poi.xwpf.converter.pdf:2.0.4")
+    implementation("com.lowagie:itext:2.1.7")
+
+    implementation("org.apache.pdfbox:pdfbox:2.0.31")
 
     testImplementation(platform("org.junit:junit-bom:6.0.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")

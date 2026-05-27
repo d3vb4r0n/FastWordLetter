@@ -133,3 +133,12 @@
 .scroll-bar .decrement-button {
     -fx-background-color: transparent;
 }
+
+.split-pane {
+    -fx-background-color: transparent;
+}
+
+.split-pane > .split-pane-divider {
+    -fx-background-color: #3a3266;
+    -fx-padding: 0 2 0 2;
+}

@@ -228,14 +228,12 @@ public class LetterDocx {
             LetterAttachment attachment = attachments.get(i);
             if (i > 0) {
                 current = insertParagraphAfter(current);
+                current.setPageBreak(true);
             }
             clearParagraphRuns(current);
             current.setAlignment(ParagraphAlignment.RIGHT);
 
             XWPFRun headerRun = current.createRun();
-            if (i > 0) {
-                headerRun.addBreak(BreakType.PAGE);
-            }
             headerRun.setText(multiple ? "Приложение " + (i + 1) : "Приложение");
 
             XWPFParagraph titleParagraph = insertParagraphAfter(current);
@@ -259,7 +257,6 @@ public class LetterDocx {
             current = bodyParagraph;
         }
     }
-
     private XWPFParagraph insertParagraphAfter(XWPFParagraph paragraph) {
         XmlCursor cursor = paragraph.getCTP().newCursor();
         cursor.toEndToken();

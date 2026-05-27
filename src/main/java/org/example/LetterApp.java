@@ -1,15 +1,17 @@
 package org.example;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
-import javafx.scene.Scene;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
@@ -34,6 +36,8 @@ public class LetterApp extends Application {
     private static final String ERROR_CLASS = "field-error";
 
     private final LetterDocx templateService = new LetterDocx();
+
+    private LetterPreview preview;
 
     private final TextField companyNameField = new TextField();
     private final TextField phoneField = new TextField();
@@ -72,7 +76,7 @@ public class LetterApp extends Application {
         form.setPadding(new Insets(16));
         form.setHgap(16);
         form.setVgap(10);
-        form.setPrefWidth(980);
+        form.setPrefWidth(600);
 
         int row = 0;
         addRow(form, row++, "Название компании", companyNameField, "ООО \"Рога и Копыта\"");
@@ -87,7 +91,7 @@ public class LetterApp extends Application {
         addRow(form, row++, "Кому пишем", recipientField, "Генеральному директору ООО \"Рога и Копыта\" Остапу Бендеру");
         addRow(form, row++, "Регистрационный номер нашего письма", ourLetterNumberField, "6543-21");
         addRow(form, row++, "Номер письма, на которое отвечаем", replyLetterNumberField, "1234-56");
-        addRow(form, row++, "Дата письма, на которое отвечаем", replyLetterDatePicker, LocalDate.now().plusDays(1).format(DATE_FORMATTER));
+        addRow(form, row++, "Дата письма, на которое отвечаем", replyLetterDatePicker, LocalDate.now().minusDays(1).format(DATE_FORMATTER));
         addRow(form, row++, "Заголовок письма", letterTitleField, "Уважаемый Остап Бендер,");
         addRow(form, row++, "Тело письма", letterBodyArea, "Верните, пожалуйста, стул!");
         addRow(form, row++, "ФИО автора", writerNameField, "Зюганов Геннадий Андреевич");
@@ -113,18 +117,83 @@ public class LetterApp extends Application {
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
 
+        preview = new LetterPreview(TEMPLATE_PATH, templateService);
+
+        SplitPane splitPane = new SplitPane();
+        splitPane.getItems().addAll(scrollPane, preview.getView());
+        splitPane.setDividerPositions(0.5);
+
         BorderPane root = new BorderPane();
-        root.setCenter(scrollPane);
+        root.setCenter(splitPane);
         root.setBottom(actions);
 
-        Scene scene = new Scene(root, 980, 680);
+        Scene scene = new Scene(root, 1200, 720);
         var stylesheet = getClass().getResource("/styles.css");
         if (stylesheet != null) {
             scene.getStylesheets().add(stylesheet.toExternalForm());
         }
+
         registerValidationListeners();
+        registerPreviewListeners();
+
         stage.setScene(scene);
         stage.show();
+
+        triggerPreviewUpdate();
+    }
+
+    private void triggerPreviewUpdate() {
+        if (preview != null) {
+            preview.updatePreview(collectCurrentData());
+        }
+    }
+
+    private LetterData collectCurrentData() {
+        return new LetterData(
+                companyNameField.getText(),
+                DEFAULT_LOGO_PATH,
+                phoneField.getText(),
+                faxField.getText(),
+                emailField.getText(),
+                okpoField.getText(),
+                ogrnField.getText(),
+                innField.getText(),
+                kppField.getText(),
+                fillDatePicker.getValue(),
+                recipientField.getText(),
+                ourLetterNumberField.getText(),
+                replyLetterNumberField.getText(),
+                replyLetterDatePicker.getValue(),
+                letterTitleField.getText(),
+                letterBodyArea.getText(),
+                writerNameField.getText(),
+                writerPositionField.getText(),
+                signatureField.getText(),
+                buildAttachments()
+        );
+    }
+
+    private void registerPreviewListeners() {
+        ChangeListener<Object> listener = (obs, old, val) -> triggerPreviewUpdate();
+
+        companyNameField.textProperty().addListener(listener);
+        phoneField.textProperty().addListener(listener);
+        faxField.textProperty().addListener(listener);
+        emailField.textProperty().addListener(listener);
+        okpoField.textProperty().addListener(listener);
+        ogrnField.textProperty().addListener(listener);
+        innField.textProperty().addListener(listener);
+        kppField.textProperty().addListener(listener);
+        fillDatePicker.valueProperty().addListener(listener);
+        recipientField.textProperty().addListener(listener);
+        ourLetterNumberField.textProperty().addListener(listener);
+        replyLetterNumberField.textProperty().addListener(listener);
+        replyLetterDatePicker.valueProperty().addListener(listener);
+        letterTitleField.textProperty().addListener(listener);
+        letterBodyArea.textProperty().addListener(listener);
+        writerNameField.textProperty().addListener(listener);
+        writerPositionField.textProperty().addListener(listener);
+        signatureField.textProperty().addListener(listener);
     }
 
     private void addRow(GridPane form, int row, String label, javafx.scene.Node input, String example) {
@@ -200,28 +269,7 @@ public class LetterApp extends Application {
             return;
         }
 
-        LetterData data = new LetterData(
-                companyNameField.getText(),
-                DEFAULT_LOGO_PATH,
-                phoneField.getText(),
-                faxField.getText(),
-                emailField.getText(),
-                okpoField.getText(),
-                ogrnField.getText(),
-                innField.getText(),
-                kppField.getText(),
-                fillDatePicker.getValue(),
-                recipientField.getText(),
-                ourLetterNumberField.getText(),
-                replyLetterNumberField.getText(),
-                replyLetterDatePicker.getValue(),
-                letterTitleField.getText(),
-                letterBodyArea.getText(),
-                writerNameField.getText(),
-                writerPositionField.getText(),
-                signatureField.getText(),
-                buildAttachments()
-        );
+        LetterData data = collectCurrentData();
 
         Path outputPath = ensureDocxExtension(saveFile.toPath());
 
@@ -348,6 +396,7 @@ public class LetterApp extends Application {
 
     private void addAttachmentRow(String title, String body, String pages) {
         AttachmentRow row = new AttachmentRow(title, body, pages);
+        row.attachListener((obs, old, val) -> triggerPreviewUpdate());
         attachmentRows.add(row);
         attachmentsBox.getChildren().add(row.container);
     }
@@ -368,6 +417,13 @@ public class LetterApp extends Application {
 
     private String safeTrim(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    @Override
+    public void stop() {
+        if (preview != null) {
+            preview.shutdown();
+        }
     }
 
     private class AttachmentRow {
@@ -395,6 +451,7 @@ public class LetterApp extends Application {
             removeButton.setOnAction(event -> {
                 attachmentRows.remove(this);
                 attachmentsBox.getChildren().remove(container);
+                triggerPreviewUpdate();
             });
 
             container.getChildren().addAll(
@@ -406,6 +463,11 @@ public class LetterApp extends Application {
                     new Separator()
             );
         }
+
+        public void attachListener(ChangeListener<Object> listener) {
+            titleField.textProperty().addListener(listener);
+            pagesField.textProperty().addListener(listener);
+            bodyArea.textProperty().addListener(listener);
+        }
     }
 }
-
