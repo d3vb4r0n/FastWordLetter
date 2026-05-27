@@ -23,6 +23,7 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,9 +59,11 @@ public class LetterApp extends Application {
     private final VBox attachmentsBox = new VBox(10);
     private final List<AttachmentRow> attachmentRows = new ArrayList<>();
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
     @Override
     public void start(Stage stage) {
-        stage.setTitle("Несчастный генератор писем DOCX");
+        stage.setTitle("Несчастный генератор DOCX писем");
 
         letterBodyArea.setPrefRowCount(8);
         letterBodyArea.setWrapText(true);
@@ -80,11 +83,11 @@ public class LetterApp extends Application {
         addRow(form, row++, "ОГРН", ogrnField, "1097654389076");
         addRow(form, row++, "ИНН", innField, "7701234567");
         addRow(form, row++, "КПП", kppField, "770605405");
-        addRow(form, row++, "Дата", fillDatePicker, "");
+        addRow(form, row++, "Дата", fillDatePicker, LocalDate.now().format(DATE_FORMATTER));
         addRow(form, row++, "Кому пишем", recipientField, "Генеральному директору ООО \"Рога и Копыта\" Остапу Бендеру");
         addRow(form, row++, "Регистрационный номер нашего письма", ourLetterNumberField, "6543-21");
         addRow(form, row++, "Номер письма, на которое отвечаем", replyLetterNumberField, "1234-56");
-        addRow(form, row++, "Дата письма, на которое отвечаем", replyLetterDatePicker, "");
+        addRow(form, row++, "Дата письма, на которое отвечаем", replyLetterDatePicker, LocalDate.now().plusDays(1).format(DATE_FORMATTER));
         addRow(form, row++, "Заголовок письма", letterTitleField, "Уважаемый Остап Бендер,");
         addRow(form, row++, "Тело письма", letterBodyArea, "Верните, пожалуйста, стул!");
         addRow(form, row++, "ФИО автора", writerNameField, "Зюганов Геннадий Андреевич");
