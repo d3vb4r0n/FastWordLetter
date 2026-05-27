@@ -37,32 +37,6 @@
 
 .date-picker > .text-field {
     -fx-background-color: #1b1830;
-}
-
-.date-picker .arrow-button {
-    -fx-background-color: #2a2448;
-    -fx-background-radius: 10;
-}
-
-.date-picker .arrow {
-    -fx-background-color: #f2efff;
-}
-
-.date-picker-popup {
-    -fx-background-color: #211c3a;
-    -fx-border-color: #3a3266;
-}
-
-.date-picker-popup .month-year-pane {
-    -fx-background-color: #2a2448;
-}
-
-.date-picker-popup .spinner .button {
-    -fx-background-color: #2a2448;
-    -fx-text-fill: #f2efff;
-}
-
-.date-picker .text-field {
     -fx-background-radius: 10 0 0 10;
     -fx-border-radius: 10 0 0 10;
     -fx-border-color: #3a3266;
@@ -84,19 +58,18 @@
     -fx-background-color: #f2efff;
 }
 
-.scroll-bar:vertical,
-.scroll-bar:horizontal {
-    -fx-background-color: #151226;
+.date-picker-popup {
+    -fx-background-color: #211c3a;
+    -fx-border-color: #3a3266;
 }
 
-.scroll-bar .thumb {
-    -fx-background-color: #3b3370;
-    -fx-background-radius: 8;
+.date-picker-popup .month-year-pane {
+    -fx-background-color: #2a2448;
 }
 
-.scroll-bar .increment-button,
-.scroll-bar .decrement-button {
-    -fx-background-color: transparent;
+.date-picker-popup .spinner .button {
+    -fx-background-color: #2a2448;
+    -fx-text-fill: #f2efff;
 }
 
 .button {
@@ -146,3 +119,17 @@
     -fx-padding: 5 8 5 8;
 }
 
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: #151226;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #3b3370;
+    -fx-background-radius: 8;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
